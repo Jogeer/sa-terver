@@ -3,7 +3,7 @@
 class Lab():
     import matplotlib.pyplot as plt
     import pandas as pd
-    
+
     def __init__(self, full_seq, sel_seq):
         self.fseq = full_seq; self.sseq = sel_seq
         self.fn = len(self.fseq); self.sn = len(self.sseq)
@@ -62,12 +62,14 @@ class Lab():
         self.hy_t = float(self.student.iloc[int(sqrt(self.fn)) - 1][str(1 - self.alpha)])
         self.hy_i = [self.x_sr-self.hy_t*(self.rmse/sqrt(self.fn)),self.x_sr+self.hy_t*(self.rmse/sqrt(self.fn))]
         # Дисперсия
-        self.chi_i = [self.chi.loc[self.fn]['0.025'], self.chi.loc[self.fn]['0.975']] # TODO: Сделать подгонку? Нахера?
+        self.chi_i = [self.chi.loc[self.fn]['0.025'], self.chi.loc[self.fn]['0.975']] # TODO: Сделать подгонку?
         self.hy_i.extend([(self.fn*self.rmse)/(self.chi_i[0]),(self.fn*self.rmse)/(self.chi_i[1])])
         # Гипотезы
         self.pd_series = self.pd.Series(self.fseq).value_counts().sort_index()
-        #self.pd_series_len = len(self.pd_series)
-        self.chiq_observed = normaltest(self.pd_series)[1]
+        if len(self.pd_series) <= 7:
+            self.chiq_observed = -10000
+        else:
+            self.chiq_observed = normaltest(self.pd_series)[1]
 
     def correlation(self, obj):
         from math import sqrt
@@ -83,13 +85,15 @@ class Lab():
         print(f'Стьюдент от {self.fn-2},{self.alpha} = {sвыборочный}, t = {self._t}')
         hy_c = 'отвергаем' if sвыборочный < self._t else 'принимаем'
         print(f'Гипотезу {hy_c}\n')
-        a = corr*obj.rmse/self.rmse
-        print(f'\ta={corr} * {obj.rmse} / {self.rmse} = {a}\n\tb={obj.x_sr} - {a} * {self.x_sr} = {obj.x_sr-a*self.x_sr}')
+        self.c_a = corr*obj.rmse/self.rmse
+        self.c_b = obj.x_sr-self.c_a*self.x_sr
+        print(f'\ta={corr} * ({obj.rmse} / {self.rmse}) = {self.c_a}\n\tb={obj.x_sr} - {self.c_a} * {self.x_sr} = {self.c_b}')
+        print(f'y={self.c_a}x+{self.c_b}\n')
 
     def hist(self):
         import seaborn as sns
         sns.distplot(self.fseq)
-        plt.show()
+        self.plt.show()
 
     # Defs part
     def _dispersion(self, seq, xn_sr, n, power=2):
@@ -141,19 +145,30 @@ class Lab():
         print(f'Доверительный интервал: ({self.hy_i[2]}; {self.hy_i[3]})\n')
 
         # Гипотезы
-        hy_r = 'принимаем' if self.chiq_observed < self.alpha else 'отвергаем'
-        print(f'Гипотеза о виде закона распределения H0 и H1:\n\tХи квадрат наблюдаемое: {self.chiq_observed}\n\tГипотезу {hy_r}')
+        print(f'Гипотеза о виде закона распределения H0 и H1:')
+        if self.chiq_observed == -10000:
+            print(f"\nПолучилось мало значений для нормалтеста")
+        else:
+            hy_r = 'принимаем' if self.chiq_observed < self.alpha else 'отвергаем'
+            print(f'\n\tХи квадрат наблюдаемое: {self.chiq_observed}\n\tГипотезу {hy_r}')
         print(f'{"="*80}\n')
 
-def dots(seqx, seqy, accx=0.01, accy=1):
+def dots(seqx, seqy, accx=None, accy=None):
     from matplotlib import pyplot as plt
-    from numpy import arange, polyfit, poly1d
+    from numpy import arange, polyfit, poly1d, diff, sort
 
     if len(seqx) == len(seqy):
         # Определения
         fig, ax = plt.subplots()
         z = polyfit(seqx, seqy, 1)
         p = poly1d(z)
+
+        if accx == None:
+            temp = diff(sort(seqx))
+            accx = min(temp[temp != 0])
+        if accy == None:
+            temp = diff(sort(seqy))
+            accy = min(temp[temp != 0])
 
         # Стулис
         plt.xticks(ticks=arange(min(seqx), max(seqx), accx), rotation=90)
@@ -163,8 +178,8 @@ def dots(seqx, seqy, accx=0.01, accy=1):
         ax.grid('off', which='major', axis='both', linestyle='--')
 
         # Графы
-        plt.scatter(seqx, seqy, marker="o")
-        plt.plot(seqx, p(seqx), "r-")
+        plt.scatter(seqx, seqy, marker="x")
+        plt.plot(seqx, p(seqx), "b-")
 
         # Шоу
         plt.show()
