@@ -1,12 +1,13 @@
-# pandas, seaborn, scipy
+# pandas, seaborn, numpy, matplotlib, scipy
 
 class Lab():
     import matplotlib.pyplot as plt
     import pandas as pd
 
-    def __init__(self, full_seq, sel_seq):
+    def __init__(self, full_seq, sel_seq, intervals=5):
         self.fseq = full_seq; self.sseq = sel_seq
         self.fn = len(self.fseq); self.sn = len(self.sseq)
+        self.intervals = intervals
 
         # Settings
         self.alpha = 0.05
@@ -53,6 +54,14 @@ class Lab():
         self.skew = self._skew(self.mcentral, self.rmse)
         self.kurt = self._kurt(self.mcentral, self.rmse)
 
+    def _tables(self):
+        from spk import intervals, midIntervals, hardTable, tableHypotes # t.me/spookikage
+        # by spookikage
+        inter = intervals(self.fseq, self.intervals)
+        midInter = midIntervals(self.fseq, inter, self.intervals)
+        hTable = hardTable(self.fseq, inter, midInter, self.intervals)
+        tableHypotes(inter, self.x_sr, self.rmse, self.intervals, hTable)
+
     def _hypothesis(self):
         from math import sqrt
         from scipy.stats import normaltest
@@ -65,21 +74,41 @@ class Lab():
         self.chi_i = [self.chi.loc[self.fn]['0.025'], self.chi.loc[self.fn]['0.975']] # TODO: Сделать подгонку?
         self.hy_i.extend([(self.fn*self.rmse)/(self.chi_i[0]),(self.fn*self.rmse)/(self.chi_i[1])])
         # Гипотезы
-        self.pd_series = self.pd.Series(self.fseq).value_counts().sort_index()
-        if len(self.pd_series) <= 7:
-            self.chiq_observed = -10000
-        else:
-            self.chiq_observed = normaltest(self.pd_series)[1]
+        #self.pd_series = self.pd.Series(self.fseq).value_counts().sort_index()
+        #if len(self.pd_series) <= 7:
+        #    self.chiq_observed = -10000
+        #else:
+        #    self.chiq_observed = normaltest(self.pd_series)[1]
+
+    def TEST__NOT__USE(self, h=3):
+        '''Полный легаси, не трогать, если понадобиться - пререпишу'''
+        import pandas as pd
+        import seaborn as sns
+        from scipy import stats
+        from math import sqrt, exp, pi
+
+        df = pd.DataFrame({'x':self.pd_series.index, 'y':self.pd_series.values})
+
+        temp={'xini':[], 'xxini':[], 'ui':[], 'f(u)':[], 'pi':[], 'ri':[]}
+        for i, row in df.iterrows():
+            temp['xini'].append(row[0]*row[1])
+            temp['xxini'].append( ((self.x_sr - row[0])**2)*row[1] )
+            temp['ui'].append( (row[0] - self.x_sr) )
+            temp['f(u)'].append( stats.norm.cdf(temp['ui'][i]) - 0.5 )
+            temp['pi'].append( h*len(df)/1 )
+
+        df['xini'] = temp['xini']; df['xxini'] = temp['xxini']
+        df['ui'] = temp['ui']; df['f(u)'] = temp['f(u)']
+
+        print(df)
 
     def correlation(self, obj):
         from math import sqrt
         summ = 0
         for xi, yi in zip(self.fseq, obj.fseq):
             summ += (xi - self.x_sr)*(yi - obj.x_sr)
-        corr = summ / self.fn / sqrt(self.s_sr**2*obj.s_sr**2)
-        print(f'Коэффициент корреляции: {corr} (по методичке)')
         corr = summ / self.fn / (self.rmse*obj.rmse)
-        print(f'Коэффициент корреляции Пирсона: {corr} (имхо, лучше)')
+        print(f'Коэффициент корреляции Пирсона: {corr}')
         self._t = (corr*sqrt(self.fn-2))/sqrt(1-corr**2)
         sвыборочный = float(self.student.loc[self.fn][str(1 - self.alpha)])
         print(f'Стьюдент от {self.fn-2},{self.alpha} = {sвыборочный}, t = {self._t}')
@@ -92,7 +121,7 @@ class Lab():
 
     def hist(self):
         import seaborn as sns
-        sns.distplot(self.fseq)
+        sns.distplot(self.fseq, bins=self.intervals)
         self.plt.show()
 
     # Defs part
@@ -136,6 +165,10 @@ class Lab():
         kurt_mean = 'График ' + ('плоский' if self.kurt > 0 else 'с пиками')
         print(f'Ассиметрия, эксцесс:\n\tВыборочный коэффициент ассиметрии: {self.skew} | {skew_mean}\n\tВыборочный коэффициент эксцесса: {self.kurt} | {kurt_mean}\n')
 
+        # Таблицы
+        print('Таблицы:')
+        self._tables()
+
         # Интервал для матожидания
         print('Интервал матожидания:\nP{|x_100 - α|*(√n/S) < t(n,y)} = γ', f'при n={self.fn}, S={self.rmse}, α={self.alpha}')
         print(f'P[{self.hy_P} < t(n,y)] = 0.95\nОтсюда t = {self.hy_t}\tИнтервал: ({self.hy_i[0]}; {self.hy_i[1]})\n')
@@ -145,43 +178,36 @@ class Lab():
         print(f'Доверительный интервал: ({self.hy_i[2]}; {self.hy_i[3]})\n')
 
         # Гипотезы
-        print(f'Гипотеза о виде закона распределения H0 и H1:')
-        if self.chiq_observed == -10000:
-            print(f"\nПолучилось мало значений для нормалтеста")
-        else:
-            hy_r = 'принимаем' if self.chiq_observed < self.alpha else 'отвергаем'
-            print(f'\n\tХи квадрат наблюдаемое: {self.chiq_observed}\n\tГипотезу {hy_r}')
+        #print(f'Гипотеза о виде закона распределения H0 и H1:')
+        #if self.chiq_observed == -10000:
+        #    print(f"\nПолучилось мало значений для нормалтеста")
+        #else:
+        #    hy_r = 'принимаем' if self.chiq_observed < self.alpha else 'отвергаем'
+        #    print(f'\n\tХи квадрат наблюдаемое: {self.chiq_observed}\n\tГипотезу {hy_r}')
         print(f'{"="*80}\n')
 
 def dots(seqx, seqy, accx=None, accy=None):
+    import pandas as pd
+    import seaborn as sns
+    import numpy as np
     from matplotlib import pyplot as plt
-    from numpy import arange, polyfit, poly1d, diff, sort
 
-    if len(seqx) == len(seqy):
-        # Определения
-        fig, ax = plt.subplots()
-        z = polyfit(seqx, seqy, 1)
-        p = poly1d(z)
+    fig, ax = plt.subplots()
 
-        if accx == None:
-            temp = diff(sort(seqx))
-            accx = min(temp[temp != 0])
-        if accy == None:
-            temp = diff(sort(seqy))
-            accy = min(temp[temp != 0])
+    if accx == None:
+        temp = np.diff(np.sort(seqx))
+        accx = min(temp[temp != 0])
+    if accy == None:
+        temp = np.diff(np.sort(seqy))
+        accy = min(temp[temp != 0])
 
-        # Стулис
-        plt.xticks(ticks=arange(min(seqx), max(seqx), accx), rotation=90)
-        plt.yticks(ticks=arange(min(seqy), max(seqy), accy))
+    ax.set_xticks(np.arange(np.min(seqx), np.max(seqx)+accx, accx*10))
+    ax.set_xticks(np.arange(np.min(seqx), np.max(seqx)+accx, accx), minor=True)
+    ax.set_yticks(np.arange(np.min(seqy), np.max(seqy)+accy, accy*10))
+    ax.set_yticks(np.arange(np.min(seqy), np.max(seqy)+accy, accy), minor=True)
 
-        ax.grid('on', which='minor', axis='both', color='0.65', linestyle='--')
-        ax.grid('off', which='major', axis='both', linestyle='--')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
 
-        # Графы
-        plt.scatter(seqx, seqy, marker="x")
-        plt.plot(seqx, p(seqx), "b-")
-
-        # Шоу
-        plt.show()
-    else:
-        return "Error"
+    sns.regplot(data=pd.DataFrame({'x':seqx,'y':seqy}), x='x', y='y', marker="x")
+    plt.show()
