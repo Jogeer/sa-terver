@@ -51,7 +51,7 @@ class Lab():
         self.kurt = self.mcentral[3]/self.s_sr**2-3
 
     def _tables(self):
-        from spk import intervals, midIntervals, hardTable, tableHypotes # t.me/spookikage
+        from spk import intervals, midIntervals, hardTable, tableHypotes #
         # by spookikage
         inter = intervals(self.fseq, self.intervals)
         midInter = midIntervals(self.fseq, inter, self.intervals)
@@ -62,11 +62,11 @@ class Lab():
         from math import sqrt
         from scipy.stats import normaltest
         self._table_connect()
-        # Матожидание
+        #
         self.hy_P = abs(self.x_sr - self.alpha)*(sqrt(self.fn)/self.rmse)
         self.hy_t = float(self.student.iloc[int(sqrt(self.fn)) - 1][str(1 - self.alpha)])
         self.hy_i = [self.x_sr-self.hy_t*(self.rmse/sqrt(self.fn)),self.x_sr+self.hy_t*(self.rmse/sqrt(self.fn))]
-        # Дисперсия
+        #
         self.chi_i = [self.chi.loc[self.fn]['0.025'], self.chi.loc[self.fn]['0.975']] # TODO: Сделать подгонку?
         self.hy_i.extend([(self.fn*self.s_sr)/(self.chi_i[0]),(self.fn*self.s_sr)/(self.chi_i[1])])
 
@@ -82,17 +82,6 @@ class Lab():
         self.c_a = corr*obj.rmse/self.rmse
         self.c_b = obj.x_sr-self.c_a*self.x_sr
 
-        print(f'Коэффициент корреляции Пирсона: {corr}')
-        print(f'Стьюдент от {self.fn-2},{self.alpha} = {sвыборочный}, t = {self._t}')
-        print(f'Гипотезу {hy_c}\n')
-        print(f'\ta={corr} * ({obj.rmse} / {self.rmse}) = {self.c_a}\n\tb={obj.x_sr} - {self.c_a} * {self.x_sr} = {self.c_b}')
-        print(f'y={self.c_a}x+{self.c_b}\n')
-
-    def hist(self):
-        import seaborn as sns
-        sns.distplot(self.fseq, bins=self.intervals)
-        self.plt.show()
-
     # Defs part
     def _dispersion(self, seq, xn_sr, n, power=2):
         from math import pow
@@ -104,34 +93,6 @@ class Lab():
     def _table_connect(self):
         self.student = self.pd.read_csv('./data.t_distribution.csv', index_col=0)
         self.chi = self.pd.read_csv('./data.chi.csv', index_col=0)
-
-    # Solve method
-    def solve(self):
-        print(f'{"="*80}')
-        print(f"Среднее: {self.x_sr}\nВыборочное среднее: {self.xn_sr}\nДисперсия: {self.s_sr}\nВыборочная дисперсия: {self.sn_sr}\nНесмещенная выборочная дисперсия: {self.sn_ns_sr}\nНесмещенная дисперсия: {self.s_ns_sr}\n")
-
-        print(f"Устойчивость:\nВыборка, диапазоны: [{self._xn_sn[0]};{self._xn_sn[1]}],\nВся, диапазоны: [{self._x_s[0]};{self._x_s[1]}],\n\tСлучайная {self.fn}: {self.x_sr},\n\tСлучайная {self.sn}: {self.xn_sr}")
-        print('>', self.sustain, '\n')
-
-        s1, s2 = "\n\t•".join([str(el) for el in self.mstart]), "\n\t•".join([str(el) for el in self.mcentral])
-        print(f"Моменты:\n{' '*4}Начальные моменты:\n\t•{s1}\n{' '*4}Центральные моменты:\n\t•{s2}\n")
-        del s1, s2
-
-        print(f'СКО: {self.rmse}\nКоэффициент вариации: {self.cv}\n')
-
-        skew_mean = 'Скос ' + ('справа' if self.skew > 0 else 'слева')
-        kurt_mean = 'График ' + ('плоский' if self.kurt > 0 else 'с пиками')
-        print(f'Ассиметрия, эксцесс:\n\tВыборочный коэффициент ассиметрии: {self.skew} | {skew_mean}\n\tВыборочный коэффициент эксцесса: {self.kurt} | {kurt_mean}\n')
-
-        print('Интервал матожидания:\nP{|x_100 - α|*(√n/S) < t(n,y)} = γ', f'при n={self.fn}, S={self.rmse}, α={self.alpha}')
-        print(f'P[{self.hy_P} < t(n,y)] = 0.95\nОтсюда t = {self.hy_t}\tИнтервал: ({self.hy_i[0]}; {self.hy_i[1]})\n')
-
-        print(f'Интервал дисперсии:\nУсловие:\tP(χ^2<{self.chi_i[0]})=0.025\tP(χ^2<{self.chi_i[1]})=0.975')
-        print(f'Доверительный интервал: ({self.hy_i[2]}; {self.hy_i[3]})\n')
-
-        print('Таблицы:')
-        self._tables()
-        print(f'{"="*80}\n')
 
 def dots(seqx, seqy, accx=None, accy=None):
     import pandas as pd
