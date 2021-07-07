@@ -29,7 +29,7 @@ def hardTable(fseq, intervals, mintervals, N):
     table = table.T
 
     h = (np.max(fseq) - np.min(fseq)) / (N - 1)
-
+    fseq = np.sort(fseq)
     j = 0
     count = np.zeros(N)
     for i in range(1, N+1):
@@ -80,7 +80,7 @@ def tableHypotes(intervals, x_sr, rmse, N, hardTable):
 
     r = np.zeros(N)
     for i in range(N):
-        r[i] = ft[i+1] + ft[i]
+        r[i] = ft[i+1] - ft[i]
     rr = pd.DataFrame(r)
     table = table.append(rr.T)
 
@@ -99,7 +99,7 @@ def tableHypotes(intervals, x_sr, rmse, N, hardTable):
     result = np.zeros(N+1)
     for i in range(N):
         result[i] = pr2[i] / r[i]
-    solve = sum(result)
+    solve = sum(result)*100 # поменять на переменную
     result[N] = solve
     res = pd.DataFrame(result)
     table = table.append(res.T)
